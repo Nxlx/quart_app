@@ -1,0 +1,29 @@
+{% extends 'bootstrap/base.html' %}
+{% block title %}Массовые данные{% endblock %}
+{% block content %}
+   {{ super() }}
+   <div class="container text-center">
+       <h1>{{ h1 }}</h1>
+       <a href="{{ url_for('view_parts2') }}"><h2>Посмотреть части списком </h2></a>
+       <a href="{{ url_for('view_parts_combined') }}"><h2>Посмотреть части в таблице</h2></a>
+       <a href="{{ url_for('add_part_view') }}"><h2>Добавить части</h2></a>
+       <table class="table">
+           <thead>
+               <tr>
+                   <th>ID</th>
+                   <th>Значение</th>
+                   <th>Номер части</th>
+               </tr>
+           </thead>
+           <tbody>
+               {% for data in mass_data %}
+                   <tr>
+                       <td>{{ data.id }}</td>
+                       <td>{{ data.value }}</td>
+                       <td>{{ data.part_number }}</td>
+                   </tr>
+               {% endfor %}
+           </tbody>
+       </table>
+   </div>
+{% endblock %}

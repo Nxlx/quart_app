@@ -1,0 +1,348 @@
+<style>
+    /* Отступы от кнопок сверху и таблицы снизу */
+    #selectedValues {
+        margin-top: 50px;  /* Отступ сверху в пикселях */
+        margin-bottom: 50px;  /* Отступ снизу в пикселях */
+        height: 50px;  /* Высота в пикселях */
+    }
+
+    /* Отступы от таблицы снизу */
+    #partsTable {
+        margin-bottom: 20px;  /* Отступ снизу в пикселях */
+    }
+</style>
+
+{% extends 'bootstrap/base.html' %}
+
+{% block title %}Части (Объединенные){% endblock %}
+
+{% block content %}
+   {{ super() }}
+   <div class="container text-center">
+    <a href="{{ url_for('view_parts2') }}" class="nav-link">Посмотреть части списком </a>
+    <span class="separator">|</span>
+    <a href="{{ url_for('view_parts_combined') }}" class="nav-link">Посмотреть части в таблице</a>
+    <span class="separator">|</span>
+    <a href="{{ url_for('add_part_view') }}" class="nav-link">Добавить части</a>
+    <span class="separator">|</span>
+    <a href="{{ url_for('mass_add_data') }}" class="nav-link">МАССОВОЕ ДОБАВЛЕНИЕ</a>
+</div>
+
+<style>
+    .nav-link {
+        display: inline-block;
+        margin-right: 10px;
+        font-size: 18px;
+    }
+
+    .separator {
+        font-size: 12px;
+        color: #000; /* Черный цвет разделителя */
+        margin-right: 10px; /* Расстояние между разделителями и ссылками */
+    }
+</style>
+
+   <div class="container text-center">
+        <button onclick="uncheckAll()">Снять все выделения</button>
+        <button onclick="uncheckColumn('Part1')">Снять выделение в столбце Part1</button>
+        <button onclick="uncheckColumn('Part2')">Снять выделение в столбце Part2</button>
+        <button onclick="uncheckColumn('Part3')">Снять выделение в столбце Part3</button>
+        <button onclick="uncheckColumn('Part4')">Снять выделение в столбце Part4</button>
+        <button onclick="uncheckColumn('Part5')">Снять выделение в столбце Part5</button>
+        <button onclick="uncheckColumn('Part6')">Снять выделение в столбце Part6</button>
+        <button onclick="uncheckColumn('Part7')">Снять выделение в столбце Part7</button>
+        <button onclick="uncheckColumn('Part8')">Снять выделение в столбце Part8</button>
+        <button onclick="uncheckColumn('Part9')">Снять выделение в столбце Part9</button>
+        <button onclick="uncheckColumn('Part10')">Снять выделение в столбце Part10</button>
+        <button onclick="uncheckColumn('Part11')">Снять выделение в столбце Part11</button>
+        <button onclick="uncheckColumn('Part12')">Снять выделение в столбце Part12</button>
+        <button onclick="uncheckColumn('Part13')">Снять выделение в столбце Part13</button>
+        <button onclick="uncheckColumn('Part14')">Снять выделение в столбце Part14</button>
+        
+        <textarea
+        id="copiedValues"
+        class="form-control mb-2"
+        style="border: 1px solid #ced4da; height: 50px; margin-bottom: 50px; margin-top: 50px;  padding: 10px; margin-top: 50px;"
+    ></textarea>
+        <!-- Здесь будут отображаться выбранные значения -->
+        <div id="selectedValuesDisplayContainer">
+            <div id="selectedValuesDisplay" class="form-control mb-2" style="border: 1px solid #ced4da; height: 50px; margin-bottom: 50px; padding: 10px; margin-top: 50px;"></div>
+            <!-- Добавленные кнопки -->
+            <button class="btn btn-primary" style="margin-bottom: 10px" onclick="copyToClipboard()">Скопировать</button>
+            <button class="btn btn-danger" style="margin-bottom: 10px" onclick="clearSelection()">Очистить</button>
+        </div>
+    
+        
+        <!--Лист подсказок  suggestionsList -->
+        <datalist id="suggestionsList">
+            <!-- Предварительно определенные варианты для подсказок -->
+            {% for part in parts_combined %}
+                {% if part.part1 %}
+                    <option value="{{ part.part1 }}">
+                {% endif %}
+                {% if part.part2 %}
+                    <option value="{{ part.part2 }}">
+                {% endif %}
+                {% if part.part3 %}
+                    <option value="{{ part.part3 }}">
+                {% endif %}
+                {% if part.part4 %}
+                    <option value="{{ part.part4 }}">
+                {% endif %}
+                {% if part.part5 %}
+                    <option value="{{ part.part5 }}">
+                {% endif %}
+                {% if part.part6 %}
+                    <option value="{{ part.part6 }}">
+                {% endif %}
+                {% if part.part7 %}
+                    <option value="{{ part.part7 }}">
+                {% endif %}
+                {% if part.part8 %}
+                    <option value="{{ part.part8 }}">
+                {% endif %}
+                {% if part.part9 %}
+                <option value="{{ part.part9 }}">
+                {% endif %}
+                {% if part.part10 %}
+                    <option value="{{ part.part10 }}">
+                {% endif %}
+                {% if part.part11 %}
+                    <option value="{{ part.part11 }}">
+                {% endif %}
+                {% if part.part12 %}
+                    <option value="{{ part.part12 }}">
+                {% endif %}
+                {% if part.part13 %}
+                    <option value="{{ part.part13 }}">
+                {% endif %}
+                {% if part.part14 %}
+                    <option value="{{ part.part14 }}">
+                {% endif %}
+            {% endfor %}
+        </datalist>
+
+
+        <div class="input-group mb-3">
+            <input
+                type="text"
+                id="selectedValuesInput"
+                class="form-control"
+                placeholder="Введите значения"
+                list="suggestionsList"
+                onkeypress="handleKeyPress(event)"
+            />
+            <div class="input-group-append">
+                <button class="btn btn-primary" type="button" onclick="ButtonaddSelectedValue()">Отправить</button>
+            </div>
+        </div>
+        <div class="table-responsive" style="overflow-x: auto; width: 100%">
+        <table class="table table-sm" id="partsTable" style="width: 100%">
+            <thead>
+                <tr>
+                    <th>Medium</th>
+                    <th>Style</th>  
+                    <th>Composition</th>  
+                    <th>Genre</th>
+                    <th>Scene</th>
+                    <th>TAGS</th>  
+                    <th>Camera</th>  
+                    <th>Lens</th>
+                    <th>Lighting</th>  
+                    <th>Eniroment</th>
+                    <th>Mood</th>
+                    <th>Color</th>  
+                    <th>Postprocess</th>  
+                    <th>-- adds</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for part in parts_combined %}
+                    <tr>
+                        <td class="partValue">
+                            {% if part.part1 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part1 }}" data-part="Part1">{{ part.part1 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part2 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part2 }}" data-part="Part2">{{ part.part2 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part3 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part3 }}" data-part="Part3">{{ part.part3 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part4 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part4 }}" data-part="Part4">{{ part.part4 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part5 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part5 }}" data-part="Part5">{{ part.part5 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part6 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part6 }}" data-part="Part6">{{ part.part6 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part7 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part7 }}" data-part="Part7">{{ part.part7 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part8 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part8 }}" data-part="Part8">{{ part.part8 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part9 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part9 }}" data-part="Part9">{{ part.part9 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part10 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part10 }}" data-part="Part10">{{ part.part10 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part11 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part11 }}" data-part="Part11">{{ part.part11 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part12 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part12 }}" data-part="Part12">{{ part.part12 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part13 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part13 }}" data-part="Par137">{{ part.part13 }}
+                            {% endif %}
+                        </td>
+                        <td class="partValue">
+                            {% if part.part14 %}
+                                <input type="checkbox" class="partCheckbox" data-value="{{ part.part14 }}" data-part="Part14">{{ part.part14 }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <!-- Обновленный JavaScript -->
+        <script>
+            // Массив для хранения выбранных значений
+            let selectedValuesArray = [];
+
+            
+            function updateDisplay() {
+                const selectedValuesDisplay = document.getElementById('selectedValuesDisplay');
+                selectedValuesDisplay.innerText = selectedValuesArray.join(', ');
+            }
+
+            document.querySelectorAll('.partCheckbox').forEach(function (checkbox) {
+                checkbox.addEventListener('click', function () {
+
+                    // Меняем состояние чекбокса
+                    checkbox.checked = !checkbox.checked;
+
+                    // Вызываем функцию обновления значений
+                    updateSelectedValues(checkbox);
+                });
+            });
+
+            document.querySelectorAll('.partValue').forEach(function (cell) {
+                cell.addEventListener('click', function () {
+                    const checkbox = cell.querySelector('.partCheckbox');
+                    checkbox.checked = !checkbox.checked;
+                    updateSelectedValues(checkbox);
+                });
+            });
+
+           // Обновление выбранных значений
+           function updateSelectedValues(checkbox) {
+                // Получение значения чекбокса
+                const value = checkbox.getAttribute('data-value');
+
+                // Если чекбокс отмечен, добавляем значение в массив
+                if (checkbox.checked && !selectedValuesArray.includes(value)) {
+                    selectedValuesArray.push(value);
+                } else {
+                    // Если чекбокс снят, удаляем значение из массива
+                    const index = selectedValuesArray.indexOf(value);
+                    if (index !== -1) {
+                        selectedValuesArray.splice(index, 1);
+                    }
+                }
+
+                // Обновление содержимого <div id="selectedValuesDisplay">
+                updateDisplay();
+            }
+            // Обработчик кнопки "Отправить"
+            function ButtonaddSelectedValue() {
+                const inputValue = document.getElementById('selectedValuesInput').value.trim();
+
+                // Если введено значение, добавляем его в массив и обновляем содержимое
+                if (inputValue) {
+                    selectedValuesArray.push(inputValue);
+                    updateDisplay();
+                }
+
+                // Очищаем поле ввода
+                document.getElementById('selectedValuesInput').value = '';
+                // Очищаем текущие значения в строке ввода
+                currentSuggestions = [];
+            }
+            
+            // Enter для поля ввода
+            function handleKeyPress(event) {
+                // Если нажата клавиша Enter
+                if (event.keyCode === 13) {
+                    ButtonaddSelectedValue();  // Вызываем функцию добавления значения
+                }
+            }
+
+ 
+            // Снять все выделения
+            function uncheckAll() {
+                document.querySelectorAll('.partCheckbox:checked').forEach(function (checkbox) {
+                    checkbox.checked = false;
+                    updateSelectedValues(checkbox);
+                });
+            }
+
+            // Снять выделение в столбце
+            function uncheckColumn(part) {
+                document.querySelectorAll(`.partCheckbox[data-part="${part}"]:checked`).forEach(function (checkbox) {
+                    checkbox.checked = false;
+                    updateSelectedValues(checkbox);
+                });
+            }
+            
+            function copyToClipboard() {
+                const selectedValuesDisplay = document.getElementById('selectedValuesDisplay');
+                const tempInput = document.createElement('textarea');
+                tempInput.value = selectedValuesDisplay.innerText;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+            }
+
+            // Функция для очистки данных и сброса чекбоксов
+            function clearSelection() {
+                selectedValuesArray = [];  // Очищаем массив
+                updateDisplay();  // Обновляем отображение
+                document.querySelectorAll('.partCheckbox:checked').forEach(function (checkbox) {
+                    checkbox.checked = false;
+                });
+            }
+
+        </script>
+   </div>
+{% endblock %}
