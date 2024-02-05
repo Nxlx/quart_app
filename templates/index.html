@@ -1,14 +1,14 @@
-{% extends 'bootstrap/base.html' %}
-{% block title %}Main page{% endblock %}
-{% block content %}
-   {{super()}}
-   <div class="container text-center">
-
-        <a href="{{ url_for('view_parts_combined') }}"><h2>Посмотреть части в таблице</h2></a>
-       <a href="{{ url_for('view_parts2') }}"><h2>Посмотреть части списком </h2></a>
-       <a href="{{ url_for('view_parts_combined') }}"><h2>Посмотреть части в таблице</h2></a>
-       <a href="{{ url_for('add_part_view') }}"><h2>Добавить части</h2></a>
-
-       
-   </div>
-{% endblock %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Send Prompt</title>
+</head>
+<body>
+    <h2>Enter Prompt</h2>
+    <form action="/send_prompt" method="post">
+        <label for="prompt">Prompt:</label>
+        <input type="text" id="prompt" name="prompt" required><br><br>
+        <input type="submit" value="Submit">
+    </form>
+</body>
+</html>

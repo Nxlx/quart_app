@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload JSON for Imagine Tasks</title>
+</head>
+<body>
+    <h2>Upload JSON File for Batch Imagine Requests</h2>
+    <input type="file" id="jsonFile" accept=".json">
+    <button onclick="processFile()">Upload and Process</button>
+    <pre id="response"></pre>
+
+    <script>
+        async function processFile() {
+            const fileInput = document.getElementById('jsonFile');
+            if (fileInput.files.length === 0) {
+                alert("Please select a JSON file.");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const text = await file.text();
+            const data = JSON.parse(text);
+            await sendRequest('/process_json', data);
+        }
+
+        async function sendRequest(url, data) {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                document.getElementById('response').textContent = "Processed " + result.count + " tasks";
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

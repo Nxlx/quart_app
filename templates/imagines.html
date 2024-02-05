@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Imagines List</title>
+</head>
+<body>
+    <h1>Imagines List</h1>
+    <table border="1">
+        <tr>
+            <th>Prompt</th>
+            <th>Record Date</th>
+            <th>Upscaled Images</th>
+        </tr>
+        {% for imagine in imagines %}
+        <tr>
+            <td>{{ imagine.prompt }}</td>
+            <td>{{ imagine.recorddate }}</td>
+            <td>
+                {% for image in imagine.upscaled_images %}
+                <a href="{{ image.upscaled_url }}" target="_blank">
+                    <img src="{{ image.small_upscaled_url }}" alt="Upscaled Image" 
+                         onerror="this.onerror=null; this.src='{{ image.upscaled_url }}'" width="100">
+                </a>
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

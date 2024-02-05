@@ -1,0 +1,344 @@
+from flask import Flask, jsonify, request, render_template
+import datetime
+import os
+import time
+import requests
+import json
+import sys
+
+app = Flask(__name__)
+
+def date_as_string():
+    return datetime.datetime.now().isoformat()
+
+def load_from_file(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            return data
+    except Exception as error:
+        print(f'Unable to load file: {file_path}. Error: {error}')
+        sys.exit(1)
+
+def save_to_file(file_path, data):
+    try:
+        with open(file_path, 'w') as file:
+            json.dump(data, file, indent=2)
+    except Exception as error:
+        print(f'Error writing to file: {error}')
+
+def get_filename_from_url(url):
+    return url.split("/")[-1].split("?")[0]
+
+def download_file(url, ind):
+    local_path = f"./{ind}-{get_filename_from_url(url)}"
+    response = requests.get(url)
+    with open(local_path, 'wb') as file:
+        file.write(response.content)
+
+@app.route('/process_prompts', methods=['POST'])
+def process_prompts():
+    token = os.getenv('USEAPI_TOKEN')
+    discord = os.getenv('USEAPI_DISCORD')
+    server = os.getenv('USEAPI_SERVER')
+    channel = os.getenv('USEAPI_CHANNEL')
+    reply_url = None
+
+    prompts = load_from_file('./prompts.json')
+    results = []
+    ind = 0
+
+    start_time = time.time()
+
+    for prompt in prompts:
+        ind += 1
+        data = {
+            'method': 'POST',
+            'headers': {
+                'Authorization': f"Bearer {token}",
+                'Content-Type': 'application/json'
+            },
+            'body': json.dumps({
+                'prompt': prompt,
+                'discord': discord,
+                'server': server,
+                'channel': channel,
+                'maxJobs': 3,
+                'replyUrl': f"{reply_url}?ind={ind}" if reply_url is not None else None
+            })
+        }
+
+        print(f"{date_as_string()} ⁝ #{ind} prompt: {prompt}")
+
+        attempt = 0
+        retry = True
+
+        while retry:
+            attempt += 1
+            response = requests.post("https://api.useapi.net/v2/jobs/imagine", headers=data['headers'], data=data['body'])
+            result = response.json()
+
+            print(f"{date_as_string()} ⁝ attempt #{attempt}, response: {{ status: {response.status_code}, jobid: {result.get('jobid')}, job_status: {result.get('status')} }}")
+
+            if response.status_code == 429:
+                print(f"{date_as_string()} ⁝ #{ind} attempt #{attempt} sleeping for 10 secs...")
+                time.sleep(10)
+            elif response.status_code in [200, 422]:
+                results.append({'status': response.status_code, 'jobid': result.get('jobid'), 'job_status': result.get('status'), 'ind': ind, 'prompt': prompt})
+                retry = False
+            else:
+                print(f"Unexpected response.status: {response.status_code}, result: {result}")
+                retry = False
+
+        save_to_file('./result.json', results)
+
+    print(f"{date_as_string()} ⁝ downloading generated images")
+
+    ind = 0
+
+    for item in results:
+        ind += 1
+        jobid = item.get('jobid')
+        status = item.get('status')
+
+        print(f"{date_as_string()} ⁝ #{ind} jobid: {{ jobid: {jobid}, status: {status} }}")
+
+        if status == 422:
+            print(f"Moderated prompt: {item.get('prompt')}")
+        elif status == 200:
+            attempt = 0
+            retry = True
+
+            while retry:
+                attempt += 1
+                response = requests.get(f"https://api.useapi.net/v2/jobs/?jobid={jobid}", headers={"Authorization": f"Bearer {token}"})
+                result = response.json()
+
+                print(f"{date_as_string()} ⁝ attempt #{attempt}, response: {{ status: {response.status_code}, jobid: {result.get('jobid')}, job_status: {result.get('status')} }}")
+
+                if response.status_code == 200:
+                    if result.get('status') == 'completed':
+                        if len(result.get('attachments', [])):
+                            download_file(result['attachments'][0]['url'], ind)
+                        else:
+                            print(f"#{ind} completed jobid has no attachments")
+                        retry = False
+                    elif result.get('status') in ['started', 'progress']:
+                        print(f"{date_as_string()} ⁝ #{ind} attempt #{attempt} sleeping for 10 secs... status: {result.get('status')}")
+                        time.sleep(10)
+                else:
+                    print(f"Unexpected response.status: {response.status_code}, result: {result}")
+                    retry = False
+
+    execution_time = time.time() - start_time
+
+    print(f"{date_as_string()}  ⁝  total elapsed time {datetime.datetime.utcfromtimestamp(execution_time).strftime('%H:%M:%S')}")
+
+   # return jsonify({'status': 'success'}), 200
+    return render_template('index.html')  # Render the index.html template
+if __name__ == '__main__':
+    app.run()
+
+
+
+
+
+
+
+
+
+        function updateMidjourneyConfig() {
+            // Собираем данные из переменных окружения
+            var discordToken = "{{ USEAPI_DISCORD }}";
+            var serverId = "{{ USEAPI_SERVER }}";
+            var channelId = "{{ USEAPI_CHANNEL }}";
+            var maxJobs = "{{ maxJobs }}";  // Используем значение из Flask-приложения
+
+            // Составляем JSON-объект для передачи данных
+            var requestData = {
+                "discord": discordToken,
+                "server": serverId,
+                "channel": channelId,
+                "maxJobs": maxJobs
+            };
+
+            // Make an AJAX request to update Midjourney config
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/update_midjourney_config", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var apiResponse = document.getElementById('apiResponse');
+                    apiResponse.textContent = xhr.responseText;
+                }
+            };
+            xhr.send(JSON.stringify(requestData));
+        }
+
+
+
+
+
+
+        @app.route('/check_tokens')
+def check_tokens():
+    useapi_server = os.getenv('USEAPI_SERVER')
+    useapi_channel = os.getenv('USEAPI_CHANNEL')
+    useapi_discord = os.getenv('USEAPI_DISCORD')
+
+
+    # Возвращаем токены в виде JSON-ответа
+    return jsonify({
+        'USEAPI_SERVER': useapi_server,
+        'USEAPI_CHANNEL': useapi_channel,
+        'USEAPI_DISCORD': useapi_discord
+    })
+
+
+    Объект XMLHttpRequest имеет несколько возможных значений для свойства readyState, которые указывают на текущее состояние запроса. Вот они:
+
+    0 (UNSENT):
+        Состояние: Объект был создан, но метод open() еще не был вызван.
+
+    1 (OPENED):
+        Состояние: Метод open() был вызван. Объект находится в процессе отправки запроса.
+
+    2 (HEADERS_RECEIVED):
+        Состояние: Метод send() был вызван, и заголовки и статус были получены от сервера.
+
+    3 (LOADING):
+        Состояние: Загрузка; данные получены от сервера, но процесс не завершен.
+
+    4 (DONE):
+        Состояние: Операция завершена. В этом состоянии можно проверять свойства status и responseText для получения информации об ответе сервера.
+
+Таким образом, readyState изменяется по мере выполнения различных этапов запроса. Когда readyState достигает значения 4, это означает, что запрос завершен, и можно проверять статус и данные ответа.
+
+
+
+
+        function updateMConfig() {
+           // Собираем данные из переменных окружения
+           // var serverId = '{{ USEAPI_SERVER }}';
+           // var channelId = '{{ USEAPI_CHANNEL }}';
+           // var discordToken = '{{ USEAPI_DISCORD }}';
+           //var maxJobs = '{{ maxJobs }}';  // Используем значение из Flask-приложения
+
+            // Составляем JSON-объект для передачи данных
+            //var requestData = {
+            //    "discord": discordToken,
+            //    "server": serverId,
+            //    "channel": channelId,
+            //    "maxJobs": maxJobs
+            //};
+
+            // Make an AJAX request to update Midjourney config
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/update_m_config", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var apiResponse = document.getElementById('apiResponse');
+                    apiResponse.textContent = xhr.responseText;
+                }
+            };
+            //xhr.send(JSON.stringify(requestData));
+            xhr.send(JSON.stringify());
+        }
+
+
+
+        function setWebhookUrl() {
+            var webhookUrl = document.getElementById('webhookUrl').value;
+            // Make an AJAX request to your Flask server to set the webhook URL
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/set_webhook_url", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.send(JSON.stringify({ "webhookUrl": webhookUrl }));
+        }
+
+         <div>
+        <label for="webhookUrl">Enter Webhook URL:</label>
+        <input type="text" id="webhookUrl" placeholder="Paste your webhook.site URL here">
+        <button onclick="setWebhookUrl()">Set Webhook URL</button>
+    </div>
+
+
+
+
+НАдо создать новый путь в приложении который использует новую комманду в API вот ее описание в API:
+ api /describe command Use this endpoint to submit the  /describe command Results obtained as a callback via optional parameter replyUrl 
+сам запрос: POST https://api.useapi.net/v2/jobs/describe
+
+Request Headers
+Authorization: Bearer {API token}
+Content-Type: application/json
+
+API token это USEAPI_TOKEN 
+Request Body:
+
+{
+    "describeUrl": "URL",
+    "discord": "Discord token",
+    "server": "Discord server id",
+    "channel": "Discord channel id",
+    "maxJobs": 3,
+    "replyUrl": "Place your call back URL here",
+    "replyRef": "Place your reference id here"
+}
+
+здесь describeUrl is required, must contain valid URL image link. - обязательный.
+discord, server, channel are optional - их мы испольльзовать не будем тк они определены в нашей конфигурации уже.
+maxJobs is optional мы тоже использовать не будем так как он уже определен в конфигурации у нас 
+
+
+USEAPI_SERVER="1195407304158355486"
+USEAPI_CHANNEL="1196702774650474497"
+USEAPI_TOKEN="user:836-UzQkERrnj2TUn6fFc0H5D"
+USEAPI_DISCORD="MTA4NzAzMTUyNTQ3Nzk5NDUzMA.Gme7e_.DZjv102-bnwa8efcTO9FA_Phfx9KvgnixK7IWI"
+NGROK_AUTHTOKEN="2b2FBcjtykTwVcSY5SxDeCb0oaD_2PCTn5HXdTZDTUq7SGZsd"
+
+
+
+
+
+
+
+user:836-UzQkERrnj2TUn6fFc0H5D
+
+"MTA4NzAzMTUyNTQ3Nzk5NDUzMA.G-dAEV.qb-pkE8jg3Jqzv3nNHyGXtniLov1luwTd-tLYw"
+
+
+const async = require('async');
+
+// Function to simulate a task
+function performTask(taskName) {
+    return new Promise(resolve => {
+        console.log(`Processing task: ${taskName}`);
+        // Simulate a delay for the task
+        setTimeout(() => {
+            console.log(`Task ${taskName} completed`);
+            resolve();
+        }, 1000);
+    });
+}
+
+// Creating a queue with a concurrency limit of 3
+const taskQueue = async.queue(async function(task, callback) {
+    await performTask(task.name);
+    callback();
+}, 3);
+
+// Handler to be called when all tasks have been processed
+taskQueue.drain(function() {
+    console.log('All tasks have been processed');
+});
+
+// Adding tasks to the queue
+taskQueue.push({name: 'Task 1'});
+taskQueue.push({name: 'Task 2'});
+taskQueue.push({name: 'Task 3'});
+taskQueue.push({name: 'Task 4'});
+
+your approach is correct and most performant (async query to feed API).
+I assume you use callback (replyUrl) to get results? This will make your implementation fully async.
